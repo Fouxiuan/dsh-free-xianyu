@@ -162,6 +162,29 @@ goofish_console action=status     # 控制台构建状态
   这里；由 ai-goofish-monitor 提供，插件负责构建与托管。
 - **对话里**：直接说「建一个监控 MacBook Air M1、2500-3500 的任务并跑一次」，模型会调用对应工具。
 
+## 截图
+
+### 1. Harness 里的面板 + 完整控制台
+
+左侧是插件注册的「闲鱼免费监控」面板，内嵌的是插件托管的 ai-goofish-monitor 控制台
+（`http://127.0.0.1:8848/dashboard`）：任务量、已扫描商品、AI 推荐数、价格曲线、实时动态。
+
+![Harness 侧边栏面板与完整控制台](docs/screenshots/01-harness-panel.png)
+
+### 2. 服务状态卡
+
+地址、端口、PID、项目目录、日志文件、完整控制台链接（「可直接打开」）、AI 模式、
+AI 模型、网关端口，以及启动/停止/构建前端三个动作。
+
+![插件面板的服务状态卡](docs/screenshots/03-service-status.png)
+
+### 3. AI 模型选择
+
+模型下拉直接列出 dsh-our-free-model 网关返回的全部模型；选中后点「应用到项目」，
+插件会写入 `.env` 并重启后台。下方是监控任务表（运行/停止/日志）与结果文件列表。
+
+![AI 模型下拉、监控任务与结果文件](docs/screenshots/02-ai-models.png)
+
 ## 前置条件
 
 - **Python 3.10+**，并已安装 ai-goofish-monitor 的依赖：`pip install -r requirements.txt`

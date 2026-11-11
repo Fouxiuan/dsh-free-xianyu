@@ -31,7 +31,8 @@
     "icon.svg",
     "README.md",
     "LICENSE",
-    "NOTICE.md"
+    "NOTICE.md",
+    "docs/screenshots"
   ],
   "engines": {
     "node": ">=22"

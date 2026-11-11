@@ -32,7 +32,9 @@
     "README.md",
     "LICENSE",
     "NOTICE.md",
-    "docs/screenshots"
+    "docs/screenshots",
+    "assets",
+    "screenshots.json"
   ],
   "engines": {
     "node": ">=22"

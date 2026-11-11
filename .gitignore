@@ -1,9 +1,12 @@
-// Keep the repository free of build output, dependencies and local runtime data.
+# Build output, dependencies and local runtime data
 node_modules/
-dist/
+/dist/
 .env
 .env.bak
 *.log
+
+# The vendored console build is part of the package, not local output
+!upstream/dist/
 
 # Upstream checkout, if someone clones it inside this repo for convenience
 ai-goofish-monitor/

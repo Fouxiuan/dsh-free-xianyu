@@ -1,0 +1,1 @@
+import{d as o,c as t,C as r,f as n,W as c,H as l,o as p}from"./index-DPLr1ds5.js";const f=o({__name:"CardDescription",props:{class:{}},setup(s){const e=s;return(a,m)=>(p(),t("p",{class:r(n(c)("text-sm text-muted-foreground",e.class))},[l(a.$slots,"default")],2))}});export{f as _};

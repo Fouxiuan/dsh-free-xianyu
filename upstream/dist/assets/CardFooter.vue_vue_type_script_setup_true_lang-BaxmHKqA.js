@@ -1,0 +1,1 @@
+import{d as o,c as r,C as t,f as n,W as c,H as l,o as p}from"./index-DPLr1ds5.js";const d=o({__name:"CardFooter",props:{class:{}},setup(s){const e=s;return(a,m)=>(p(),r("div",{class:t(n(c)("flex items-center p-6 pt-0",e.class))},[l(a.$slots,"default")],2))}});export{d as _};

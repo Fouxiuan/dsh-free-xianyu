@@ -13,12 +13,13 @@
 <details>
 <summary>关于内置上游代码</summary>
 
-- `upstream/` 是 ai-goofish-monitor 的后端源码（`src/`、`spider_v2.py`、`prompts/` 等，约 600KB），
-  采用上游的 MIT 许可，版权归其作者（见 [NOTICE.md](NOTICE.md)）。
+- `upstream/` 是 ai-goofish-monitor 的后端源码与预构建控制台（`src/`、`spider_v2.py`、`prompts/`、
+  `dist/` 等，约 1.3MB），采用上游的 MIT 许可，版权归其作者（见 [NOTICE.md](NOTICE.md)）。
 - 插件在 `<DSH_HOME>/dsh-free-xianyu/runtime/` 下创建 venv 与工作目录，**不改动** `upstream/`；
   自己的任务、结果、日志都写在运行时目录里，升级插件不会丢数据。
 - 如果你更想用自己维护的那份上游项目，把 `projectRoot` 指向它（或把 `useBuiltinRuntime` 设为
   `false`），插件就改为驱动你的目录，内置副本不再使用。
+- 内置副本是**快照**。上游更新后要跟进，需要重新同步 `upstream/`；想始终跟随上游就切外部模式。
 
 </details>
 
@@ -38,7 +39,7 @@ DeepSeek Harness Host 进程
    │  ├─ 托管子进程: venv/python -m src.app  → http://127.0.0.1:8848
    │  ├─ 13 个 goofish_* Agent 工具
    │  ├─ 同源 API: /api/dsh-free-xianyu/*
-   │  └─ 前端构建桥: 自动 npm install + npm run build
+   │  └─ 控制台: upstream/dist（内置）/ 有 web-ui 源码时自动重建
    └─ 浏览器半身 (client.js)
       ├─ sidebar.panellist → 左侧导航「闲鱼免费监控」图标
       └─ main             → 监控面板（状态/任务/结果/日志/AI 模型）
@@ -53,14 +54,17 @@ AI 调用链
 
 ### 特性
 
+- **零外部依赖安装**：上游源码与预构建控制台都在 `upstream/` 里，首次启动自动建 venv、装依赖、
+  布置工作目录。机器上只要有 Python 3.10+。
 - **一站式生命周期**：装好插件自动起后台；停止/重启/健康检查/退出清理都由插件负责。已经在跑的实例会被
   复用（不会去杀不是它启动的进程）。
-- **前端自动构建**：ai-goofish-monitor 的后端只在启动时 `dist/` 已存在才挂载 `/assets`，所以插件把
-  「装依赖 → 构建 → 再起后台」串成一步，`http://127.0.0.1:8848/` 开箱即是完整 Vue 控制台。
-- **12 个 Agent 工具**：模型可以直接建任务、跑任务、读结果、看日志、切模型、构建前端。
+- **控制台开箱可用**：内置了预构建的 Vue 控制台，`http://127.0.0.1:8848/` 装完即可打开；如果你提供了
+  上游的 `web-ui/` 源码，插件也能自动 `npm install` + `npm run build` 重建。
+- **13 个 Agent 工具**：模型可以直接建任务、跑任务、读结果、看日志、切模型、初始化环境、构建前端。
 - **免费模型接入**：自动发现 dsh-our-free-model 的本地网关（`chanGateway.relay` 或 `forward`），
-  挑选带视觉能力的免费模型，写进项目 `.env`（备份为 `.env.bak`）。
-- **侧边栏面板**：不离开 Harness 就能看服务状态、任务列表、结果文件、日志与 AI 配置。
+  挑选带视觉能力的免费模型，写进运行时目录的 `.env`（备份为 `.env.bak`）。
+- **无登录态也能启动**：服务、任务列表、结果、日志、控制台都不依赖闲鱼登录态；只有真正跑抓取任务才需要。
+- **侧边栏面板**：不离开 Harness 就能看服务状态、运行环境、任务列表、结果文件、日志与 AI 配置。
 
 ## 上游项目
 
@@ -92,8 +96,8 @@ plugin_manager action=install_bundle target=<本仓库目录>
 插件激活后自动执行一次（约 40 秒，只需一次）：
 
 1. `python -m venv` 建专属虚拟环境 → `<DSH_HOME>/dsh-free-xianyu/runtime/venv/`
-2. `pip install` 装内置的依赖清单 → 52 个包，含 fastapi / playwright / openai
-3. 把 `upstream/` 的源码与提示词布置到工作目录 → `runtime/app/`
+2. `pip install` 装内置的依赖清单 → 18 条声明、52 个包，含 fastapi / playwright / openai
+3. 把 `upstream/` 的源码、提示词与预构建控制台布置到工作目录 → `runtime/app/`
 
 之后就运行在 `runtime/app/`，任务、结果、日志都写在里面。
 
@@ -115,6 +119,38 @@ goofish_console action=status      # 控制台构建状态
 如果你想用自己维护的 ai-goofish-monitor，在 `cordis.patch.yml` 里把 `projectRoot` 指到它的
 绝对路径（或设 `useBuiltinRuntime: false`），插件就改为驱动那个目录，内置副本不再使用。此时需要
 你自己装好它的依赖。
+
+## 项目结构
+
+```
+dsh-free-xianyu/
+├── index.js              Host 半身入口（注册工具、路由、托管后台）
+├── client.js             浏览器半身（侧边栏图标 + 监控面板）
+├── cordis.patch.yml      bundle 挂载行
+├── lib/
+│   ├── runtime.js        ★ 内置运行环境：建 venv、装依赖、布置工作目录
+│   ├── backend.js        后台子进程生命周期
+│   ├── frontend.js       可选的前端重建（有 web-ui 源码时）
+│   ├── gateway.js        dsh-our-free-model 网关发现与 .env 写入
+│   ├── goofish-api.js    后端 HTTP 客户端
+│   ├── routes.js         同源 API /api/dsh-free-xianyu/*
+│   ├── tools.js          13 个 goofish_* 工具定义
+│   ├── config.js / paths.js
+│   └── *.selftest.mjs    5 套离线自测
+├── upstream/             ★ 内置的 ai-goofish-monitor（源码 + 预构建控制台）
+├── docs/screenshots/     README 截图
+└── locale/ icon.svg
+```
+
+运行时数据（不属于仓库）：
+
+```
+<DSH_HOME>/dsh-free-xianyu/
+├── runtime/venv/         插件专属虚拟环境
+├── runtime/app/          工作目录：任务、结果、日志、登录态、.env
+├── runtime/deps.json     依赖指纹
+└── backend.log           后台进程日志
+```
 
 ## 配置
 
@@ -180,8 +216,8 @@ goofish_console action=status      # 控制台构建状态
 
 - **侧边栏面板**：左侧「闲鱼免费监控」→ 服务状态与启停、完整控制台入口、AI 模型下拉、任务列表
   （运行/停止/看日志）、结果文件。每 5 秒自动刷新。
-- **完整 Vue 控制台**：`http://127.0.0.1:8848/`（端口取 `serverPort`）。任务、结果、日志、设置都在
-  这里；由 ai-goofish-monitor 提供，插件负责构建与托管。
+- **完整 Vue 控制台**：`http://127.0.0.1:8848/`（端口取 `serverPort`）。内置了预构建版本，
+  装完直接能开；任务、结果、日志、设置都在这里。
 - **对话里**：直接说「建一个监控 MacBook Air M1、2500-3500 的任务并跑一次」，模型会调用对应工具。
 
 ## 截图
@@ -228,6 +264,39 @@ AI 模型、网关端口，以及启动/停止/构建前端三个动作。
 - 本插件**不修改** dsh-our-free-model 的设置；开启网关要你在它自己的设置页操作。
 - 虚拟环境与工作目录都在 `<DSH_HOME>/dsh-free-xianyu/` 下，不写入系统 Python、不改 `upstream/`。
 
+## 常见问题
+
+**首次启动卡在「待初始化」？**
+看 `goofish_runtime action=status` 的 `error`，再到 `<DSH_HOME>/dsh-free-xianyu/backend.log`
+看 pip 输出。最常见的是机器上找不到 `python`：把 `pythonPath` 写成解释器绝对路径
+（`python3` / `py -3` 也可以）后重试 `goofish_runtime action=setup`。
+
+**装完没网，自动装依赖失败？**
+把 `autoProvision` 设为 `false`，联网后再手动 `goofish_runtime action=setup`。
+已装好的 venv 有指纹记录，不会重复安装。
+
+**控制台打开是 500 / 空白？**
+`upstream/dist` 里内置了预构建版本，正常可直接打开。若被你自己清掉，重新
+`goofish_runtime action=setup` 即可恢复；想用自己的前端就提供 `web-ui/` 源码后
+`goofish_console action=build restart=true`。
+
+**跑任务报「未找到登录状态文件」？**
+闲鱼登录态还没有。用 `upstream/chrome-extension/` 导出一次 JSON，放进
+`<DSH_HOME>/dsh-free-xianyu/runtime/app/state/`。**这不是启动失败**——服务、面板、结果、日志
+在无登录态时都正常。
+
+**抓取报浏览器相关错误？**
+上游默认走系统 Chrome / Edge；两者都没有时安装 Playwright 浏览器：
+`<DSH_HOME>/dsh-free-xianyu/runtime/venv/Scripts/python -m playwright install chromium`。
+
+**升级插件后数据会丢吗？**
+不会。重新部署只覆盖 `runtime/app/` 里的**代码**（`src/`、`spider_v2.py`、`dist/`），
+`jsonl/`、`logs/`、`images/`、`state/`、`prompts/` 都保留。
+
+**怎么跟随上游更新？**
+内置副本是快照。要么重新同步 `upstream/`，要么设 `useBuiltinRuntime: false` +
+`projectRoot` 指向你自己维护的 checkout。
+
 ## 开发与自测
 
 ```bash
@@ -252,6 +321,6 @@ node lib/goofish-api.selftest.mjs     # HTTP 客户端；设 GOOFISH_TEST_BASEUR
 
 [MIT](LICENSE) © 2026 Fouxiuan
 
-本仓库不包含上游项目的源码，只是运行时调用它们。第三方声明与各自的许可证见
-[NOTICE.md](NOTICE.md)：ai-goofish-monitor 为 MIT（Copyright (c) 2025 dingyufei615），
-dsh-our-free-model 见其仓库声明。
+`upstream/` 内置了 ai-goofish-monitor 的源码与构建产物，遵守其 **MIT** 许可
+（Copyright (c) 2025 dingyufei615）；`dsh-our-free-model` 是运行时依赖的另一个插件，
+本仓库不包含它的代码，许可见其仓库声明。完整第三方归属见 [NOTICE.md](NOTICE.md)。

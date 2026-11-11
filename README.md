@@ -202,5 +202,6 @@ node lib/goofish-api.selftest.mjs     # HTTP 客户端；设 GOOFISH_TEST_BASEUR
 
 [MIT](LICENSE) © 2026 Fouxiuan
 
-上游项目许可见上方「依赖的上游项目」一节：ai-goofish-monitor 为 MIT
-（Copyright (c) 2025 dingyufei615），dsh-our-free-model 见其仓库声明。
+本仓库不包含上游项目的源码，只是运行时调用它们。第三方声明与各自的许可证见
+[NOTICE.md](NOTICE.md)：ai-goofish-monitor 为 MIT（Copyright (c) 2025 dingyufei615），
+dsh-our-free-model 见其仓库声明。

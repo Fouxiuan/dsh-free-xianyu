@@ -1,4 +1,4 @@
-# dsh-free-xianyu · 闲鱼免费监控 for DeepSeek Harness
+# dsh-free-xianyu · 闲鱼免费监控
 领到免费token不知道拿来做什么，做开发又怕不安全，额度不够，对话又有点多余，不如做些实际的功能，又不会又风险的事情把
 
 把闲鱼（Goofish）二手商品监控做成 **DeepSeek Harness 插件**：装进 Harness 后，左侧导航多一个

@@ -32,3 +32,17 @@ key, and probes `GET /v1/models`. It never modifies the other plugin's state.
 - The host application this plugin is written for. Plugin APIs used here are
   documented public contracts (`ctx.tools`, `ctx.webServer`,
   `ctx.slots`, `ctx.locale`).
+
+## Vendored copy of ai-goofish-monitor
+
+`upstream/` holds the backend sources of ai-goofish-monitor
+(<https://github.com/Usagi-org/ai-goofish-monitor>), MIT License,
+Copyright (c) 2025 dingyufei615. It contains `src/`, `spider_v2.py`,
+`requirements.txt`, `config.json.example`, `prompts/` and the browser-extension
+helper — the files this plugin needs to run the monitor without a separate
+checkout. Their license text is reproduced in [`LICENSE`](LICENSE); any
+redistribution keeps that copyright notice.
+
+Not vendored: the upstream Vue frontend sources (`web-ui/`) are not shipped. The
+plugin builds the console from the runtime directory only when the user supplies
+those sources; otherwise the backend still serves its full JSON API.

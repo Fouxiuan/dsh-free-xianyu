@@ -261,9 +261,11 @@
     const gateway = ai.gateway || {}
     const consoleInfo = (status && status.console) || {}
     const frontend = consoleInfo.frontend || {}
+    const runtimeInfo = (status && status.runtime) || {}
     const healthy = server.healthy === true
     const consoleUrl = typeof consoleInfo.url === 'string' ? consoleInfo.url : ''
     const consoleServed = consoleInfo.served === true
+    const runtimeReady = runtimeInfo.ready === true
 
     return h(
       'div',
@@ -311,6 +313,22 @@
           button({}, busy === '构建前端' ? '构建中…' : '构建前端', () => void run('构建前端', '/console/build', { restart: true }), busy !== ''),
         ),
         frontend.buildError ? h(Row, { label: '构建错误', value: frontend.buildError }) : null,
+        h(
+          'div',
+          { style: S.row },
+          h('span', { style: S.key }, '运行环境'),
+          h(
+            'span',
+            { style: { ...S.badge, ...(runtimeReady ? S.ok : S.bad) } },
+            runtimeReady ? (runtimeInfo.builtin === false ? '外部项目' : '内置就绪') : '待初始化',
+          ),
+          h('span', { style: S.muted }, runtimeInfo.builtin === false ? '使用 projectRoot 指定的项目' : `内置上游 ${runtimeInfo.upstreamFiles ?? 0} 个文件`),
+          h('span', { style: { flex: 1 } }),
+          runtimeReady
+            ? null
+            : button({ ...S.buttonPrimary }, busy === '初始化环境' ? '初始化中…' : '初始化环境', () => void run('初始化环境', '/runtime/setup', {}), busy !== ''),
+        ),
+        runtimeInfo.error ? h(Row, { label: '环境错误', value: runtimeInfo.error }) : null,
         h(
           'div',
           { style: S.row },

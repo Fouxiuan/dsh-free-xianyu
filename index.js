@@ -15,10 +15,11 @@
 import fs from 'node:fs'
 
 import { Config, PLUGIN_ID, PLUGIN_VERSION, normalizeConfig } from './lib/config.js'
-import { resolveDshHome, resolveProjectRoot, projectEnvFile } from './lib/paths.js'
+import { resolveDshHome, resolveProjectRoot, projectEnvFile, packageDir, pluginDataDir } from './lib/paths.js'
 import { createBackendManager } from './lib/backend.js'
 import { createGoofishApi } from './lib/goofish-api.js'
 import { ensureFrontend, inspectFrontend } from './lib/frontend.js'
+import { inspectRuntime, provisionRuntime, runtimePaths } from './lib/runtime.js'
 import {
   discoverGateway,
   listGatewayModels,
@@ -66,8 +67,29 @@ function maskKey(key) {
 export function apply(ctx, rawConfig) {
   const config = normalizeConfig(rawConfig)
   const dshHome = resolveDshHome()
-  const projectRoot = resolveProjectRoot(config.projectRoot)
+  const packageRoot = packageDir()
+  const dataDir = pluginDataDir(dshHome)
+
+  /**
+   * Where the app actually runs, and how `projectRoot` is used.
+   *
+   * Default ("builtin"): the package ships `upstream/`; the plugin provisions a
+   * venv + staged working tree under its data dir and runs that. `projectRoot`
+   * stays empty and nothing else has to be installed.
+   *
+   * Bring-your-own ("external"): set `projectRoot` (or place an
+   * `ai-goofish-monitor` checkout beside this package, or turn
+   * `useBuiltinRuntime` off) and the plugin drives that checkout with the plain
+   * `pythonPath` interpreter instead.
+   */
+  const externalRoot = resolveProjectRoot(config.projectRoot)
+  const externalMode = !config.useBuiltinRuntime || externalRoot !== ''
+  const runtime = runtimePaths(dataDir, packageRoot)
+  const projectRoot = externalMode ? externalRoot : runtime.appDir
   const envFile = projectEnvFile(projectRoot)
+
+  /** Paths the plugin writes: the external checkout, or its own provisioned app. */
+  const dataRoot = externalMode ? externalRoot : runtime.appDir
 
   const log = (...args) => {
     try { ctx.logger?.info?.(`dsh-free-xianyu: ${args.join(' ')}`) } catch { /* logging is optional */ }
@@ -93,8 +115,30 @@ export function apply(ctx, rawConfig) {
   let lastAiError = ''
   let runtimeModel = ''
   let modelsCache = { key: '', at: 0, value: { gatewayReady: false, source: 'none', models: [] } }
+  /** Last provision result, so a failed setup can be reported instead of retried blindly. */
+  let lastProvision = null
 
-  const backend = createBackendManager({ getConfig: () => config, projectRoot, log, warn })
+  /**
+   * The interpreter + working directory to launch the app with.
+   *
+   * External mode uses the caller's `pythonPath` in the checkout they named.
+   * Builtin mode uses the provisioned venv inside the plugin data dir, which is
+   * why the plugin can start without anything pre-installed.
+   */
+  function runTarget() {
+    if (externalMode) {
+      return { cwd: externalRoot, python: config.pythonPath, configured: false }
+    }
+    return { cwd: runtime.appDir, python: runtime.pythonBin, configured: true }
+  }
+
+  const backend = createBackendManager({
+    getConfig: () => config,
+    projectRoot: dataRoot,
+    getRunTarget: runTarget,
+    log,
+    warn,
+  })
 
   const api = () => createGoofishApi({ baseURL: backend.baseURL(), timeoutMs: config.requestTimeoutMs })
 
@@ -308,14 +352,56 @@ export function apply(ctx, rawConfig) {
     return { ...result, state: inspectFrontend(projectRoot) }
   }
 
+  /**
+   * Make the builtin runtime usable: venv + dependencies + staged app tree.
+   *
+   * Only applies in builtin mode. `autoProvision` runs it before the first start
+   * so an install needs nothing else; turning it off defers the work to an
+   * explicit `goofish_runtime action=setup`, which is useful when the machine has
+   * no network at activation time.
+   */
+  async function prepareRuntime(options = {}) {
+    if (externalMode) {
+      return {
+        skipped: true,
+        reason: 'external projectRoot is in use',
+        state: inspectRuntime({ dataDir, packageDir: packageRoot }),
+      }
+    }
+    const force = options.force === true
+    const before = inspectRuntime({ dataDir, packageDir: packageRoot })
+    if (before.ready && !force) return { skipped: true, reason: 'runtime is ready', state: before }
+    if (!force && !config.autoProvision) {
+      return { skipped: true, reason: 'autoProvision=false', state: before }
+    }
+    try {
+      const result = await provisionRuntime({
+        dataDir,
+        packageDir: packageRoot,
+        pythonPath: config.pythonPath,
+        force,
+        log,
+        warn,
+      })
+      lastProvision = result
+      return { ...result, state: inspectRuntime({ dataDir, packageDir: packageRoot }) }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      warn(`runtime provisioning failed: ${message}`)
+      lastProvision = { ok: false, error: message }
+      return { ok: false, error: message, state: inspectRuntime({ dataDir, packageDir: packageRoot }) }
+    }
+  }
+
   async function startServer(options = {}) {
+    const runtimeSetup = await prepareRuntime()
     const ai = await inspectAi()
     const sync = await syncProjectEnv(ai)
     const frontend = await prepareFrontend({ force: options.rebuildFrontend === true })
     try {
       const server = await backend.start({ extraEnv: backendEnv(ai) })
       log(`backend ${server.healthy ? 'healthy' : 'started'} on ${server.url}`)
-      return { server, ai: publicAi(ai), envSync: sync, frontend, consoleURL: consoleURLOf(server) }
+      return { server, ai: publicAi(ai), envSync: sync, frontend, runtime: runtimeSetup, consoleURL: consoleURLOf(server) }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       lastAiError = message
@@ -344,9 +430,10 @@ export function apply(ctx, rawConfig) {
     return (async () => {
       const [server, ai] = await Promise.all([backend.status(), inspectAi()])
       const frontend = inspectFrontend(projectRoot)
+      const runtimeState = inspectRuntime({ dataDir, packageDir: packageRoot })
       const project = {
         root: projectRoot,
-        python: config.pythonPath,
+        python: runTarget().python,
         envFile,
         envExists: fs.existsSync(envFile),
         configured: config,
@@ -360,6 +447,18 @@ export function apply(ctx, rawConfig) {
           served: server.healthy && frontend.built,
           frontend,
           autoBuild: config.buildFrontend && config.autoBuildFrontend,
+        },
+        runtime: {
+          builtin: !externalMode,
+          ready: externalMode ? true : runtimeState.ready,
+          needsVenv: externalMode ? false : runtimeState.needsVenv,
+          needsDeps: externalMode ? false : runtimeState.needsDeps,
+          pythonFound: externalMode ? true : runtimeState.pythonFound,
+          source: externalMode ? 'external-checkout' : 'vendored',
+          upstreamFiles: runtimeState.upstreamFiles,
+          depsInstalledAt: runtimeState.depsInstalledAt,
+          error: runtimeState.error || (lastProvision?.ok === false ? lastProvision.error : ''),
+          autoProvision: config.autoProvision,
         },
         project: { root: project.root, python: project.python, envFile: project.envFile, envExists: project.envExists },
         ai: { ...publicAi(ai), lastError: lastAiError },
@@ -393,6 +492,37 @@ export function apply(ctx, rawConfig) {
       frontend,
       console: { url: consoleURLOf(server), served: server.healthy && frontend.state?.built === true },
       restarted,
+    }
+  }
+
+  /** Report or build the builtin runtime (venv + deps + staged app tree). */
+  async function runtimeAction(options = {}) {
+    const action = typeof options.action === 'string' ? options.action.trim() : 'status'
+    const state = inspectRuntime({ dataDir, packageDir: packageRoot })
+    if (action === 'status') {
+      return {
+        builtin: !externalMode,
+        source: externalMode ? 'external-checkout' : 'vendored',
+        state,
+        runtime: {
+          ready: externalMode ? true : state.ready,
+          needsVenv: externalMode ? false : state.needsVenv,
+          needsDeps: externalMode ? false : state.needsDeps,
+          pythonFound: externalMode ? true : state.pythonFound,
+          depsInstalledAt: state.depsInstalledAt,
+          autoProvision: config.autoProvision,
+        },
+        lastError: lastProvision?.ok === false ? lastProvision.error : state.error,
+      }
+    }
+    if (action !== 'setup') {
+      throw new Error(`unknown action "${action}"; expected status or setup`)
+    }
+    const setup = await prepareRuntime({ force: options.force === true })
+    return {
+      builtin: !externalMode,
+      setup,
+      state: inspectRuntime({ dataDir, packageDir: packageRoot }),
     }
   }
 
@@ -445,6 +575,7 @@ export function apply(ctx, rawConfig) {
     applyAi,
     buildConsole,
     rebuildConsole,
+    runtimeAction,
     log,
   }
 
@@ -459,6 +590,7 @@ export function apply(ctx, rawConfig) {
     applyAi,
     buildConsole,
     rebuildConsole,
+    runtimeAction,
   }
 
   ctx.effect(() => {

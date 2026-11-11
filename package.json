@@ -1,9 +1,9 @@
 {
   "name": "dsh-free-xianyu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Free Xianyu monitor for DeepSeek Harness: hosts ai-goofish-monitor, adds goofish_* agent tools, a sidebar panel and the full Vue console, with AI analysis served by dsh-our-free-model free lanes.",
+  "description": "Free Xianyu monitor for DeepSeek Harness: ships the ai-goofish-monitor sources, provisions its own Python runtime, and adds goofish_* agent tools, a sidebar panel and the full Vue console, with AI analysis served by dsh-our-free-model free lanes.",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -26,6 +26,7 @@
     "index.js",
     "client.js",
     "lib",
+    "upstream",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",

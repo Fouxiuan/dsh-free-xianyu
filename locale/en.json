@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Free Xianyu monitor",
+    "description": "Xianyu second-hand marketplace monitor for DeepSeek Harness: hosts the ai-goofish-monitor backend, adds goofish_* tools and a sidebar panel, and analyzes listings with dsh-our-free-model free lanes."
+  }
+}

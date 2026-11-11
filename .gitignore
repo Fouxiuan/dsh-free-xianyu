@@ -1,0 +1,19 @@
+// Keep the repository free of build output, dependencies and local runtime data.
+node_modules/
+dist/
+.env
+.env.bak
+*.log
+
+# Upstream checkout, if someone clones it inside this repo for convenience
+ai-goofish-monitor/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Scratch
+.agents/

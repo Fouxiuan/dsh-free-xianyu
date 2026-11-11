@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 Fouxiuan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Third-party notices
+
+This project is a DeepSeek Harness plugin. It does not vendor the projects it
+drives; it installs, starts, and talks to them at runtime.
+
+1. ai-goofish-monitor — https://github.com/Usagi-org/ai-goofish-monitor
+   MIT License, Copyright (c) 2025 dingyufei615.
+   The FastAPI backend, Playwright scraper, and Vue console hosted by this
+   plugin are that project's work; this repository only launches and controls
+   them over HTTP.
+
+2. dsh-our-free-model — https://github.com/Ebony-Vinyl/dsh-our-free-model
+   The plugin whose local OpenAI-compatible gateway supplies free model lanes
+   for listing analysis. This repository reads its settings, never modifies
+   them.
+
+3. DeepSeek Harness (dsh) — the host application this plugin is written for.

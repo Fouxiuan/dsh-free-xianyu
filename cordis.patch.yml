@@ -1,0 +1,16 @@
+# dsh-free-xianyu — bundle patch.
+#
+# Mounts the Host half (managed backend lifecycle, the /api/dsh-free-xianyu
+# routes, the goofish_* agent tools) plus the browser half declared by
+# package.json's `dsh.client` (the sidebar panel).
+- insert:
+    - id: dsh-free-xianyu
+      name: 'dsh-free-xianyu'
+      config:
+        projectRoot: ''
+        pythonPath: python
+        serverPort: 8848
+        autoStart: true
+        buildFrontend: true
+        autoBuildFrontend: true
+        frontendInstall: true

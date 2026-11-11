@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "闲鱼免费监控",
+    "description": "DeepSeek Harness 内的闲鱼商品监控插件：托管 ai-goofish-monitor 后端、提供 goofish_* 工具与侧边栏面板，并用 dsh-our-free-model 的免费模型分析商品。"
+  }
+}

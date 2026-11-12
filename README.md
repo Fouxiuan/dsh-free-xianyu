@@ -99,10 +99,10 @@ dsh-our-free-model 是另一个独立插件，AI 分析需要它（也可以改�
 **用 Harness CLI 一条命令装（推荐）**
 
 ```bash
-# 从 npm 装（最短，需要该包已发布）
+# 从 npm 装（最短）
 dsh plugin --profile desktop add dsh-free-xianyu
 
-# 或直接从 GitHub 装：不经过 npm，也不用手动下载
+# 或直接从 GitHub 装：不经过 npm
 dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
 ```
 

@@ -13,10 +13,12 @@
 **一条命令安装**
 
 ```bash
-dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
+dsh plugin --profile desktop add dsh-free-xianyu
 ```
 
-装完重启 Harness，左侧导航出现「闲鱼免费监控」。其他安装方式见[安装](#安装)章节。
+装完重启 Harness，左侧导航出现「闲鱼免费监控」。
+
+也可以用 `add github:Fouxiuan/dsh-free-xianyu` 直接从仓库装（不经过 npm）。其他方式见[安装](#安装)章节。
 
 <details>
 <summary>关于内置上游代码</summary>
@@ -97,16 +99,20 @@ dsh-our-free-model 是另一个独立插件，AI 分析需要它（也可以改�
 **用 Harness CLI 一条命令装（推荐）**
 
 ```bash
-# 直接装 GitHub 仓库：不需要 npm，也不需要先下载
+# 从 npm 装（最短，需要该包已发布）
+dsh plugin --profile desktop add dsh-free-xianyu
+
+# 或直接从 GitHub 装：不经过 npm，也不用手动下载
 dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
 ```
 
 桌面版和被 `dsh web` 启动的 profile 都适用；`desktop` 之外的 profile 换成对应名字即可
 （如 `--profile tui`）。装完会自动写进 profile 的 `dependencies` 与 `dsh.profile.bundles`。
 
-更新到最新提交：把同一条命令再跑一次。想锁定版本：
+更新：npm 方式用 `add dsh-free-xianyu@latest`；github 方式重跑同一条命令。想锁定版本：
 
 ```bash
+dsh plugin --profile desktop add dsh-free-xianyu@1.1.0
 dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu#<commit-sha>
 ```
 
@@ -124,8 +130,8 @@ plugin_manager action=install_bundle target=<本仓库目录>
 dsh plugin --profile desktop add link:/absolute/path/to/dsh-free-xianyu
 ```
 
-> 目前还没有发布到 npm，所以 `add dsh-free-xianyu` 这种短名暂时不可用；
-> `github:` 方式安装的是完整仓库（含内置的 `upstream/`），功能和本地安装完全一致。
+> 三种方式装到的都是同一份完整内容（含内置的 `upstream/`），功能完全一致；
+> 区别只在更新方式和是否需要联网拉取。
 
 ### 2. 首次启动会自动准备环境
 

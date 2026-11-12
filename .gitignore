@@ -28,3 +28,6 @@ Thumbs.db
 *.delivery.json
 *.browser-check.json
 *.visual-check*.png
+
+# npm pack output
+*.tgz

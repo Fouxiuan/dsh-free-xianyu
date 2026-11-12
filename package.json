@@ -35,7 +35,8 @@
     "NOTICE.md",
     "docs/screenshots",
     "assets",
-    "screenshots.json"
+    "screenshots.json",
+    "dsh-free-xianyu-architecture.html"
   ],
   "engines": {
     "node": ">=22"

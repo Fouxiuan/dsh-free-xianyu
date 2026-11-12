@@ -20,3 +20,11 @@ Thumbs.db
 
 # Scratch
 .agents/
+
+# Archify working folders and delivery receipts (local diagram tooling output)
+.archify/
+*.finalize.json
+*.finalize-summary.json
+*.delivery.json
+*.browser-check.json
+*.visual-check*.png

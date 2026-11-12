@@ -10,6 +10,14 @@
 > `upstream/` 里；插件首次启动会自动建好专属 Python 虚拟环境、装好依赖、布置好工作目录。
 > 机器上只要有 **Python 3.10+**，其余都不用手动准备。
 
+**一条命令安装**
+
+```bash
+dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
+```
+
+装完重启 Harness，左侧导航出现「闲鱼免费监控」。其他安装方式见[安装](#安装)章节。
+
 <details>
 <summary>关于内置上游代码</summary>
 
@@ -84,12 +92,40 @@ dsh-our-free-model 是另一个独立插件，AI 分析需要它（也可以改�
 
 ### 1. 装本插件
 
+三种方式，按方便程度排。**先完全退出 Harness 桌面程序**再执行命令（profile 有写锁）。
+
+**用 Harness CLI 一条命令装（推荐）**
+
+```bash
+# 直接装 GitHub 仓库：不需要 npm，也不需要先下载
+dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
+```
+
+桌面版和被 `dsh web` 启动的 profile 都适用；`desktop` 之外的 profile 换成对应名字即可
+（如 `--profile tui`）。装完会自动写进 profile 的 `dependencies` 与 `dsh.profile.bundles`。
+
+更新到最新提交：把同一条命令再跑一次。想锁定版本：
+
+```bash
+dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu#<commit-sha>
+```
+
+**在 Harness 界面里装**
+
+设置 → 插件 → 从本地目录安装，指向本仓库目录；或让 Agent 执行：
+
 ```text
 plugin_manager action=install_bundle target=<本仓库目录>
 ```
 
-或在 Harness 设置 → 插件 → 从本地目录安装。安装后 `cordis.patch.yml` 会插入一行
-`dsh-free-xianyu`，不需要配置 `projectRoot`。
+**本地路径（开发时最方便，改代码立即生效）**
+
+```bash
+dsh plugin --profile desktop add link:/absolute/path/to/dsh-free-xianyu
+```
+
+> 目前还没有发布到 npm，所以 `add dsh-free-xianyu` 这种短名暂时不可用；
+> `github:` 方式安装的是完整仓库（含内置的 `upstream/`），功能和本地安装完全一致。
 
 ### 2. 首次启动会自动准备环境
 
@@ -122,6 +158,9 @@ goofish_console action=status      # 控制台构建状态
 
 ## 项目结构
 
+运行原理可以看这张交互式架构图（点节点跳到对应源码，支持深色模式与导出）：
+[`dsh-free-xianyu-architecture.html`](dsh-free-xianyu-architecture.html)
+
 ```
 dsh-free-xianyu/
 ├── index.js              Host 半身入口（注册工具、路由、托管后台）
@@ -138,6 +177,7 @@ dsh-free-xianyu/
 │   ├── config.js / paths.js
 │   └── *.selftest.mjs    5 套离线自测
 ├── upstream/             ★ 内置的 ai-goofish-monitor（源码 + 预构建控制台）
+├── dsh-free-xianyu-architecture.html   架构图（自包含单文件）
 ├── docs/screenshots/     README 截图
 └── locale/ icon.svg
 ```
@@ -296,6 +336,18 @@ AI 模型、网关端口，以及启动/停止/构建前端三个动作。
 **怎么跟随上游更新？**
 内置副本是快照。要么重新同步 `upstream/`，要么设 `useBuiltinRuntime: false` +
 `projectRoot` 指向你自己维护的 checkout。
+
+**`dsh plugin add` 报了 pnpm / 写锁相关的错误？**
+说明 Harness 还开着。先完全退出桌面程序（包括托盘），再执行命令。另外这条命令走的是
+pnpm，需要机器上有 pnpm；桌面版自带一份，`dsh web` 启动的场景则需要你自己装。
+
+**从 `link:` 换成 `github:` 安装，报依赖冲突？**
+同一个包不能同时有两种来源。先移除再装：
+
+```bash
+dsh plugin --profile desktop remove dsh-free-xianyu
+dsh plugin --profile desktop add github:Fouxiuan/dsh-free-xianyu
+```
 
 ## 开发与自测
 

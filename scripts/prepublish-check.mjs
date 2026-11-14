@@ -115,6 +115,7 @@ console.log('\nprepublish-check: offline self-tests')
 
 for (const test of [
   'client.selftest.mjs',
+  'lib/python.selftest.mjs',
   'lib/runtime.selftest.mjs',
   'lib/frontend.selftest.mjs',
   'lib/gateway.selftest.mjs',

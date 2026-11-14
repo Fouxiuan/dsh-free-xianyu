@@ -20,6 +20,7 @@ import { createBackendManager } from './lib/backend.js'
 import { createGoofishApi } from './lib/goofish-api.js'
 import { ensureFrontend, inspectFrontend } from './lib/frontend.js'
 import { inspectRuntime, provisionRuntime, runtimePaths } from './lib/runtime.js'
+import { detectPython } from './lib/python.js'
 import {
   discoverGateway,
   listGatewayModels,
@@ -117,6 +118,8 @@ export function apply(ctx, rawConfig) {
   let modelsCache = { key: '', at: 0, value: { gatewayReady: false, source: 'none', models: [] } }
   /** Last provision result, so a failed setup can be reported instead of retried blindly. */
   let lastProvision = null
+  /** Interpreter resolved for external mode (builtin mode always runs the venv). */
+  let externalInterpreter = null
 
   /**
    * The interpreter + working directory to launch the app with.
@@ -127,9 +130,51 @@ export function apply(ctx, rawConfig) {
    */
   function runTarget() {
     if (externalMode) {
-      return { cwd: externalRoot, python: config.pythonPath, configured: false }
+      return {
+        cwd: externalRoot,
+        python: externalInterpreter?.command || config.pythonPath,
+        args: externalInterpreter?.args ?? [],
+        configured: false,
+      }
     }
     return { cwd: runtime.appDir, python: runtime.pythonBin, configured: true }
+  }
+
+  /**
+   * External mode needs a real interpreter too: `pythonPath` may be empty (the
+   * default, meaning "auto"), and on macOS the conventional name is `python3`.
+   * Resolved once per activation and reused by status and start.
+   */
+  async function ensureExternalInterpreter() {
+    if (externalInterpreter) return { ok: true, ...externalInterpreter }
+    const detection = await detectPython({ configured: config.pythonPath, log })
+    if (detection.ok) {
+      externalInterpreter = {
+        command: detection.command,
+        args: detection.args,
+        version: detection.version,
+        label: detection.label,
+      }
+      log(`using Python ${detection.version} (${detection.label}) for ${externalRoot}`)
+    } else {
+      warn(`no usable interpreter for ${externalRoot}: ${detection.error}`)
+    }
+    return detection
+  }
+
+  /** The error a start would otherwise disguise as "backend stopped". */
+  function runtimeNotReadyError(runtimeSetup) {
+    const state = inspectRuntime({ dataDir, packageDir: packageRoot })
+    const reason =
+      runtimeSetup?.error ||
+      state.error ||
+      (lastProvision && lastProvision.ok === false ? lastProvision.error : '') ||
+      (config.autoProvision ? 'provisioning did not finish' : 'autoProvision=false')
+    return new Error(
+      `Python runtime is not ready: ${reason}\n` +
+        'Install Python 3.10+, then run goofish_runtime action=setup (or enable autoProvision). ' +
+        'Set pythonPath if the interpreter is not on PATH.',
+    )
   }
 
   const backend = createBackendManager({
@@ -395,6 +440,13 @@ export function apply(ctx, rawConfig) {
 
   async function startServer(options = {}) {
     const runtimeSetup = await prepareRuntime()
+    if (!externalMode && !inspectRuntime({ dataDir, packageDir: packageRoot }).ready) {
+      throw runtimeNotReadyError(runtimeSetup)
+    }
+    if (externalMode) {
+      const detection = await ensureExternalInterpreter()
+      if (!detection.ok) throw new Error(detection.error)
+    }
     const ai = await inspectAi()
     const sync = await syncProjectEnv(ai)
     const frontend = await prepareFrontend({ force: options.rebuildFrontend === true })
@@ -433,7 +485,7 @@ export function apply(ctx, rawConfig) {
       const runtimeState = inspectRuntime({ dataDir, packageDir: packageRoot })
       const project = {
         root: projectRoot,
-        python: runTarget().python,
+        python: runTarget().python || 'auto',
         envFile,
         envExists: fs.existsSync(envFile),
         configured: config,
@@ -459,6 +511,13 @@ export function apply(ctx, rawConfig) {
           depsInstalledAt: runtimeState.depsInstalledAt,
           error: runtimeState.error || (lastProvision?.ok === false ? lastProvision.error : ''),
           autoProvision: config.autoProvision,
+          pythonPath: config.pythonPath || 'auto',
+          interpreter: externalMode
+            ? externalInterpreter?.label ?? ''
+            : lastProvision?.interpreter?.label ?? '',
+          triedInterpreters: Array.isArray(lastProvision?.triedInterpreters)
+            ? lastProvision.triedInterpreters.map((entry) => entry.candidate)
+            : [],
         },
         project: { root: project.root, python: project.python, envFile: project.envFile, envExists: project.envExists },
         ai: { ...publicAi(ai), lastError: lastAiError },
@@ -511,8 +570,11 @@ export function apply(ctx, rawConfig) {
           pythonFound: externalMode ? true : state.pythonFound,
           depsInstalledAt: state.depsInstalledAt,
           autoProvision: config.autoProvision,
+          pythonPath: config.pythonPath || 'auto',
+          interpreter: lastProvision?.interpreter ?? null,
         },
-        lastError: lastProvision?.ok === false ? lastProvision.error : state.error,
+        lastError:
+          lastProvision?.ok === false ? lastProvision.error : state.error,
       }
     }
     if (action !== 'setup') {

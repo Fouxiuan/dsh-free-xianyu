@@ -211,7 +211,7 @@ dsh-free-xianyu/
 | `useBuiltinRuntime` | `true` | 用内置上游 + 自动 venv；设 `false` 则改为驱动 `projectRoot` 指定的项目 |
 | `autoProvision` | `true` | 首次启动自动建 venv / 装依赖 / 布置工作目录 |
 | `projectRoot` | 空 | 可选：你自己的 ai-goofish-monitor 目录；空 = 用内置副本 |
-| `pythonPath` | `python` | 用来**创建 venv** 的 Python；外部模式下则是运行解释器 |
+| `pythonPath` | 自动探测 | 留空时依次试 `python3` / `python` / `py -3` 和 Homebrew、`/usr/local`、`/usr/bin` 下的解释器（要求 3.10+）；填了就只用它。外部模式下这个是运行解释器 |
 | `serverPort` | `8848` | 后台监听端口（仅本机） |
 | `autoStart` | `true` | 插件激活时自动启后台 |
 | `aiBaseURL` | 空 | 手动指定 OpenAI 兼容地址；空 = 自动用免费模型网关 |
@@ -295,7 +295,9 @@ AI 模型、网关端口，以及启动/停止/构建前端三个动作。
 
 ## 前置条件
 
-- **Python 3.10+**（唯一必须自己准备的东西）。依赖由插件装进专属 venv，不污染全局环境。
+- **Python 3.10+**（唯一必须自己准备的东西）。插件自己找解释器：`python` 不存在也没关系，
+  会继续试 `python3`、`py -3` 以及 Homebrew / `/usr/local` / `/usr/bin` 下的常见位置。
+  依赖由插件装进专属 venv，不污染全局环境。
 - **Node.js + npm**：只在构建 Vue 控制台时需要。首次构建缺依赖时插件会自动 `npm install`；
   没装 Node 也能用后台 API 和侧边栏面板，只是没有完整的 Web 控制台。
 - **闲鱼登录态**：需要用上游的 Chrome 扩展（`upstream/chrome-extension/`）导出一次，
@@ -316,10 +318,12 @@ AI 模型、网关端口，以及启动/停止/构建前端三个动作。
 
 ## 常见问题
 
-**首次启动卡在「待初始化」？**
-看 `goofish_runtime action=status` 的 `error`，再到 `<DSH_HOME>/dsh-free-xianyu/backend.log`
-看 pip 输出。最常见的是机器上找不到 `python`：把 `pythonPath` 写成解释器绝对路径
-（`python3` / `py -3` 也可以）后重试 `goofish_runtime action=setup`。
+**后台报「Python runtime is not ready」/「backend stopped before becoming healthy」？**
+多半是没找到可用的 Python 3.10+ 解释器（或 venv 没建完）。`goofish_runtime action=status`
+会返回 `interpreter` 和 `triedInterpreters`，直接说明试过哪些命令、各自为什么不可用；
+`<DSH_HOME>/dsh-free-xianyu/backend.log` 里也能看到同样的失败原因。
+把 `pythonPath` 填成解释器绝对路径（例如 `/opt/homebrew/bin/python3`）再
+`goofish_runtime action=setup` 即可；留空则继续自动探测。
 
 **装完没网，自动装依赖失败？**
 把 `autoProvision` 设为 `false`，联网后再手动 `goofish_runtime action=setup`。

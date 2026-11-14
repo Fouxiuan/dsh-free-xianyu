@@ -68,6 +68,17 @@ check('bundle manifest is declared', () => {
   return pkg.dsh.bundle.patch
 })
 
+check('bundle patch leaves the interpreter to auto-detection', () => {
+  // The patch is the shipped default config. Pinning `python` here reproduces the
+  // macOS failure that 1.1.1 exists to fix, no matter what lib/config.js defaults to.
+  const patch = fs.readFileSync(path.join(root, 'cordis.patch.yml'), 'utf8')
+  const pinned = patch.match(/^\s*pythonPath:\s*(.+?)\s*$/m)
+  if (!pinned) return 'pythonPath unset'
+  const value = pinned[1].replace(/^['"]|['"]$/g, '')
+  if (value !== '') throw new Error(`cordis.patch.yml pins pythonPath: ${pinned[1]} — leave it '' so python3/py -3 can be found`)
+  return 'pythonPath: auto'
+})
+
 check('browser half is declared and shipped', () => {
   if (pkg.dsh?.client?.platform !== 'web') throw new Error('dsh.client.platform must be "web"')
   if (pkg.exports?.['./client'] !== './client.js') throw new Error('exports["./client"] must point at ./client.js')

@@ -8,7 +8,9 @@
       name: 'dsh-free-xianyu'
       config:
         projectRoot: ''
-        pythonPath: python
+        # '' = auto-detect a Python 3.10+ interpreter (python3 / py -3 / Homebrew / /usr/local).
+        # Pinning a binary here means every failure names that binary instead of falling back.
+        pythonPath: ''
         serverPort: 8848
         autoStart: true
         buildFrontend: true
